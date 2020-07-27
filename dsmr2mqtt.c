@@ -176,6 +176,50 @@ int mqtt_send(char *topic, char *msg, bool retain) {
   return mosquitto_publish(mosq, NULL, topic, strlen(msg), msg, 0, retain);
 }
 
+
+int init_messages(){
+  char *msg = calloc(256, sizeof(char) );
+  snprintf(msg, 256, "%d", 0);
+  mqtt_send(DSMR_DEV_COUNTER_TIMESTAMP, msg, 1);
+  mqtt_send(DSMR_DEV_COUNTER, msg, 1);
+  mqtt_send(DSMR_DEV_COUNTER_RATE, msg, 1);
+  mqtt_send(DSMR_E_IN_TODAY, msg, 0);
+  mqtt_send(DSMR_E_OUT_TODAY, msg, 0);
+  mqtt_send(DSMR_P1_VERSION, msg, 0);
+  mqtt_send(DSMR_EQUIPMENT_ID, msg, 0);
+  mqtt_send(DSMR_TARIFF, msg, 0);
+  mqtt_send(DSMR_SWITCH_POS, msg, 0);
+  mqtt_send(DSMR_MSG, msg, 0);
+  mqtt_send(DSMR_MSG_LONG, msg, 0);  
+  mqtt_send(DSMR_TIMESTAMP, msg, 0);
+  mqtt_send(DSMR_P_IN_TOTAL, msg, 0);
+  mqtt_send(DSMR_P_OUT_TOTAL, msg, 0);
+  mqtt_send(DSMR_P_IN_L1, msg, 0);
+  mqtt_send(DSMR_P_IN_L2, msg, 0);
+  mqtt_send(DSMR_P_IN_L3, msg, 0);
+  mqtt_send(DSMR_E_IN_TARIFF1, msg, 0);
+  mqtt_send(DSMR_E_IN_TARIFF2, msg, 0);
+  mqtt_send(DSMR_E_OUT_TARIFF1, msg, 0);
+  mqtt_send(DSMR_E_OUT_TARIFF2, msg, 0);
+  mqtt_send(DSMR_V_L1, msg, 0);
+  mqtt_send(DSMR_V_L2, msg, 0);
+  mqtt_send(DSMR_V_L3, msg, 0);
+  mqtt_send(DSMR_I_L1, msg, 0);
+  mqtt_send(DSMR_I_L2, msg, 0);
+  mqtt_send(DSMR_I_L3, msg, 0);
+  mqtt_send(DSMR_POWER_FAILURES, msg, 0);
+  mqtt_send(DSMR_POWER_FAILURES_LONG, msg, 0);
+  mqtt_send(DSMR_V_SAGS_L1, msg, 0);
+  mqtt_send(DSMR_V_SAGS_L2, msg, 0);
+  mqtt_send(DSMR_V_SAGS_L3, msg, 0);
+  mqtt_send(DSMR_V_SWELLS_L1, msg, 0);
+  mqtt_send(DSMR_V_SWELLS_L2, msg, 0);
+  mqtt_send(DSMR_V_SWELLS_L3, msg, 0);
+
+  free(msg);
+  return 0;
+}
+
 int send_values(struct dsmr_data_struct *data) {
 
   char *msg = calloc(2049, sizeof(char) );
@@ -354,33 +398,36 @@ int main(int argc, char **argv) {
   parse_arguments(argc, argv);
 
   // setup mqtt connection
-  if (mqtt_setup(config.mqtt_broker_host, config.mqtt_broker_port) != 0)
-    goto cleanup_mqtt;
+  if ( 0 == mqtt_setup(config.mqtt_broker_host, config.mqtt_broker_port) ){
+    init_messages();
 
-  telegram_parser parser;
-  if (telegram_parser_open(&parser, config.serial_device, 0, 0, NULL) != 0)
-    goto cleanup_parser;
-    
-  telegram_parser_read(&parser);
+    telegram_parser parser;
+    if ( 0 == telegram_parser_open(&parser, config.serial_device, 0, 0, NULL) )
+        
+      telegram_parser_read(&parser);
 
-  struct dsmr_data_struct *data = parser.data;
+      struct dsmr_data_struct *data = parser.data;
 
-  do {
-    // TODO: figure out how to handle errors, time-outs, etc.
-    telegram_parser_read(&parser);
+      do {
+        // TODO: figure out how to handle errors, time-outs, etc.
+        telegram_parser_read(&parser);
 
-    // Send values to MQTT broker
-    send_values(data);
+        // Send values to MQTT broker
+        send_values(data);
 
-  } while (parser.terminal && keepRunning); // If we're connected to a 
-                                            // serial device, keep 
-                                            // reading, otherwise exit
-
-  cleanup_parser:
-    telegram_parser_close(&parser);
-  cleanup_mqtt:
+      } while (parser.terminal && keepRunning); // If we're connected to a 
+                                                // serial device, keep 
+                                                // reading, otherwise exit
+    }
+    else
+    {
+      telegram_parser_close(&parser);
+    }
+  }
+  else{
     mosquitto_destroy(mosq);
     mosquitto_lib_cleanup();
+  }
 
   return 0;
 }
