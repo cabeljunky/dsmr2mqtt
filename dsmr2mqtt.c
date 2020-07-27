@@ -29,12 +29,22 @@
 #define DSMR_P_OUT_L2      "dsmr/reading/phase_currently_returned_l2"
 #define DSMR_P_OUT_L3      "dsmr/reading/phase_currently_returned_l3"
 
+#define DSMR_V_L1          "dsmr/reading/phase_voltage_l1"
+#define DSMR_V_L2          "dsmr/reading/phase_voltage_l2"
+#define DSMR_V_L3          "dsmr/reading/phase_voltage_l3"
+#define DSMR_I_L1          "dsmr/reading/phase_power_current_l1"
+#define DSMR_I_L2          "dsmr/reading/phase_power_current_l2"
+#define DSMR_I_L3          "dsmr/reading/phase_power_current_l3"
+
 #define DSMR_DEV_COUNTER_TIMESTAMP "dsmr/reading/extra_device_timestamp"
 #define DSMR_DEV_COUNTER   "dsmr/reading/extra_device_delivered"
 #define DSMR_DEV_COUNTER_RATE "dsmr/reading/extra_device_delivered_rate"
 
 #define DSMR_P1_VERSION    "dsmr/meter-stats/dsmr_version"
 #define DSMR_TARIFF        "dsmr/meter-stats/electricity_tariff"
+#define DSMR_SWITCH_POS    "dsmr/meter-stats/switch_pos"
+#define DSMR_MSG           "dsmr/meter-stats/message_short"
+#define DSMR_MSG_LONG       "dsmr/meter-stats/message_long"
 #define DSMR_POWER_FAILURES "dsmr/meter-stats/power_failure_count"
 #define DSMR_POWER_FAILURES_LONG "dsmr/meter-stats/long_power_failure_count"
 #define DSMR_V_SAGS_L1     "dsmr/meter-stats/voltage_sag_count_l1"
@@ -45,7 +55,7 @@
 #define DSMR_V_SWELLS_L3   "dsmr/meter-stats/voltage_swell_count_l3"
 
 
-/* config struct */
+// config struct 
 struct dsmr2mqtt_config {
   char *serial_device;
   char *mqtt_broker_host;
@@ -53,17 +63,17 @@ struct dsmr2mqtt_config {
 };
 struct dsmr2mqtt_config config;
 
-/* Mosquitto */
+// Mosquitto 
 struct mosquitto *mosq = NULL;
 
-/* Global counter for last gas meter value */
-double   last_gas_count = 0;
-time_t   last_gas_timestamp = 0;
+// Global counter for last gas meter value 
+double last_gas_count = 0;
+time_t last_gas_timestamp = 0;
 
-/* Global counter for daily values */
-time_t   last_timestamp = 0;
-double   e_in_midnight = 0;
-double   e_out_midnight = 0;
+// Global counter for daily values 
+time_t last_timestamp = 0;
+double e_in_midnight = 0;
+double e_out_midnight = 0;
 
 bool volatile keepRunning = true;
 
@@ -71,7 +81,7 @@ void intHandler(int dummy) {
     keepRunning = 0;
 }
 
-/* Help and arguments */
+// Help and arguments 
 void show_help() {
   fprintf(stderr, "dsmr2mqtt, version %s-%s\n", VERSION, GIT_VERSION);
   fprintf(stderr, "Usage:  dsmr2mqtt [-d <serial_device>] [-m "
@@ -85,51 +95,49 @@ void show_help() {
 }
 
 int parse_arguments(int argc, char **argv) {
-  int c;
+  int c = 0;
   int digit_optind = 0;
-  int aopt = 0, bopt = 0;
-  char *copt = 0, *dopt = 0;
+
   while ((c = getopt(argc, argv, "hd:m:p:")) != -1) {
     int this_option_optind = optind ? optind : 1;
     switch (c) {
-    case 'h':
-      show_help();
-      exit(0);
-      break;
-    case 'd':
-      config.serial_device = optarg;
-      break;
-    case 'm':
-      config.mqtt_broker_host = optarg;
-      break;
-    case 'p':
-      config.mqtt_broker_port = strtoul(optarg, NULL, 10);
-      break;
-    default:
-      show_help;
+      case 'h':
+        show_help();
+        exit(0);
+        break;
+      case 'd':
+        config.serial_device = optarg;
+        break;
+      case 'm':
+        config.mqtt_broker_host = optarg;
+        break;
+      case 'p':
+        config.mqtt_broker_port = strtoul(optarg, NULL, 10);
+        break;
+      default:
+        show_help();
     }
   }
   return 0;
 }
 
-void mosq_log_callback(struct mosquitto *mosq, void *userdata, int level,
-                       const char *str) {
-  /* Pring all log messages regardless of level. */
+void mosq_log_callback(struct mosquitto *mosq, void *userdata, int level, const char *str) {
+  // Pring all log messages regardless of level.
 
   switch (level) {
-  // case MOSQ_LOG_DEBUG:
-  // case MOSQ_LOG_INFO:
-  // case MOSQ_LOG_NOTICE:
-  case MOSQ_LOG_WARNING:
-  case MOSQ_LOG_ERR: {
-    fprintf(stderr, "%i:%s\n", level, str);
-  }
+    // case MOSQ_LOG_DEBUG:
+    // case MOSQ_LOG_INFO:
+    // case MOSQ_LOG_NOTICE:
+    case MOSQ_LOG_WARNING:
+    case MOSQ_LOG_ERR: {
+      fprintf(stderr, "%i:%s\n", level, str);
+    }
   }
 }
 
 void mosq_publish_callback(struct mosquitto *mosq, void *userdata, int level) {}
 
-/* Setup MQTT connection to broker */
+// Setup MQTT connection to broker 
 int mqtt_setup(char *host, int port) {
 
   int keepalive = 60;
@@ -166,16 +174,16 @@ int mqtt_send(char *topic, char *msg, bool retain) {
 
 int send_values(struct dsmr_data_struct *data) {
 
-  char *msg = malloc(64);
+  char *msg = calloc(2049);
   
-  /* Calculate total energy consumption for today */
-  double e_in_today;
-  double e_out_today;
-  struct tm *last_time;
-  struct tm *current_time;
+  // Calculate total energy consumption for today
+  double e_in_today = 0.0;
+  double e_out_today = 0.0;
+  struct tm *last_time = 0;
+  struct tm *current_time = 0;
   
   last_time = localtime( &last_timestamp );
-  current_time = localtime( &data->timestamp );
+  current_time = localtime( (time_t *)&data->timestamp );
 
   if (last_time->tm_yday != current_time->tm_yday) {
     last_timestamp = data->timestamp;
@@ -188,66 +196,135 @@ int send_values(struct dsmr_data_struct *data) {
     e_in_today = (data->E_in[1] + data->E_in[2]) - e_in_midnight;
     e_out_today = (data->E_out[1] + data->E_out[2]) - e_out_midnight;
 
-    /* in kWh */
-    sprintf(msg, "%.3f", e_in_today);
+    // in kWh 
+    snprintf(msg, 256, "%.3f", e_in_today);
     mqtt_send(DSMR_E_IN_TODAY, msg, 0);
-    sprintf(msg, "%.3f", e_out_today);
+    snprintf(msg, 256, "%.3f", e_out_today);
     mqtt_send(DSMR_E_OUT_TODAY, msg, 0);
   }
 
-  /* Current timestamp */
-  sprintf(msg, "%i", data->timestamp);
+
+  // Device Version 
+  snprintf(msg, 256, "%d.%d", data->P1_version_major, data->P1_version_minor);
+  mqtt_send(DSMR_P1_VERSION, msg, 0);
+
+  snprintf(msg, 256, "%s", data->equipment_id, 18);
+  mqtt_send(DSMR_EQUIPMENT_ID, msg, 0);
+
+  snprintf(msg, 256, "%d", data->tariff);
+  mqtt_send(DSMR_TARIFF, msg, 0);
+
+  snprintf(msg, 256, "%d", data->switchpos);
+  mqtt_send(DSMR_SWITCH_POS, msg, 0);  
+
+  snprintf(msg, 256, "%s", data->textmsg_codes);
+  mqtt_send(DSMR_MSG, msg, 0);  
+
+  snprintf(msg, 2048, "%s", data->textmsg);
+  mqtt_send(DSMR_MSG_LONG, msg, 0);  
+
+  // Current timestamp 
+  snprintf(msg, 256, "%d", data->timestamp);
   mqtt_send(DSMR_TIMESTAMP, msg, 0);
 
-  /* Current electricity delivered in Watts */
-  sprintf(msg, "%.0f", data->P_in_total * 1000);
+  // Current electricity delivered in Watts 
+  snprintf(msg, 256, "%.0f", data->P_in_total * 1000);
   mqtt_send(DSMR_P_IN_TOTAL, msg, 0);
 
-  /* Current electricity returned in Watts */
-  sprintf(msg, "%.0f", data->P_out_total * 1000);
+  // Current electricity returned in Watts 
+  snprintf(msg, 256, "%.0f", data->P_out_total * 1000);
   mqtt_send(DSMR_P_OUT_TOTAL, msg, 0);
 
-  /*  in Watts */
-  sprintf(msg, "%.0f", data->P_in[0] * 1000);
+  //  in Watts 
+  snprintf(msg, 256, "%.0f", data->P_in[0] * 1000);
   mqtt_send(DSMR_P_IN_L1, msg, 0);
 
-  /*  in Watts */
-  sprintf(msg, "%.0f", data->P_in[1] * 1000);
+  //  in Watts
+  snprintf(msg, 256, "%.0f", data->P_in[1] * 1000);
   mqtt_send(DSMR_P_IN_L2, msg, 0);
   
-  /*  in Watts */
-  sprintf(msg, "%.0f", data->P_in[2] * 1000);
+  //  in Watts
+  snprintf(msg, 256, "%.0f", data->P_in[2] * 1000);
   mqtt_send(DSMR_P_IN_L3, msg, 0);
 
 
-  /*  in kWh */
-  sprintf(msg, "%.3f", data->E_in[1]);
+  //  in kWh 
+  snprintf(msg, 256, "%.3f", data->E_in[1]);
   mqtt_send(DSMR_E_IN_TARIFF1, msg, 0);
 
-  /*  in kWh */
-  sprintf(msg, "%.3f", data->E_in[2]);
+  //  in kWh
+  snprintf(msg, 256, "%.3f", data->E_in[2]);
   mqtt_send(DSMR_E_IN_TARIFF2, msg, 0);
 
-  /*  in kWh */
-  sprintf(msg, "%.3f", data->E_out[1]);
+  //  in kWh
+  snprintf(msg, 256, "%.3f", data->E_out[1]);
   mqtt_send(DSMR_E_OUT_TARIFF1, msg, 0);
 
-  /*  in kWh */
-  sprintf(msg, "%.3f", data->E_out[2]);
+  //  in kWh
+  snprintf(msg, 256, "%.3f", data->E_out[2]);
   mqtt_send(DSMR_E_OUT_TARIFF2, msg, 0);
   
+  //  in V
+  snprintf(msg, 256, "%.3f", data->unit_V[0]);
+  mqtt_send(DSMR_V_L1, msg, 0);
+
+  //  in V
+  snprintf(msg, 256, "%.3f", data->unit_V[1]);
+  mqtt_send(DSMR_V_L2, msg, 0);
+
+  //  in V
+  snprintf(msg, 256, "%.3f", data->unit_V[2]);
+  mqtt_send(DSMR_V_L3, msg, 0);
+
+ //  in V
+  snprintf(msg, 256, "%.3f", data->unit_I[0]);
+  mqtt_send(DSMR_I_L1, msg, 0);
+
+  //  in V
+  snprintf(msg, 256, "%.3f", data->unit_I[1]);
+  mqtt_send(DSMR_I_L2, msg, 0);
+
+  //  in V
+  snprintf(msg, 256, "%.3f", data->unit_I[2]);
+  mqtt_send(DSMR_I_L3, msg, 0);
+
+
+  snprintf(msg, 256, "%d", data->power_failures);
+  mqtt_send(DSMR_POWER_FAILURES, msg, 0);
+  snprintf(msg, 256, "%d", data->power_failures_long);
+  mqtt_send(DSMR_POWER_FAILURES_LONG, msg, 0);
+
+  //  in V
+  snprintf(msg, 256, "%d", data->V_sags[0]);
+  mqtt_send(DSMR_V_SAGS_L1, msg, 0);
+  //  in V
+  snprintf(msg, 256, "%d", data->V_sags[1]);
+  mqtt_send(DSMR_V_SAGS_L2, msg, 0);
+  //  in V
+  snprintf(msg, 256, "%d", data->V_sags[2]);
+  mqtt_send(DSMR_V_SAGS_L3, msg, 0);
+
+    //  in V
+  snprintf(msg, 256, "%d", data->V_sags[0]);
+  mqtt_send(DSMR_V_SWELLS_L1, msg, 0);
+  //  in V
+  snprintf(msg, 256, "%d", data->V_sags[1]);
+  mqtt_send(DSMR_V_SWELLS_L2, msg, 0);
+  //  in V
+  snprintf(msg, 256, "%d", data->V_sags[2]);
+  mqtt_send(DSMR_V_SWELLS_L3, msg, 0);
 
   // Gas values (with retain)
   if (last_gas_timestamp != data->dev_counter_timestamp[0]) {
-    sprintf(msg, "%i", data->dev_counter_timestamp[0]);
+    snprintf(msg, 256, "%i", data->dev_counter_timestamp[0]);
     mqtt_send(DSMR_DEV_COUNTER_TIMESTAMP, msg, 1);
     
-    sprintf(msg, "%.3f", data->dev_counter[0]);
+    snprintf(msg, 256, "%.3f", data->dev_counter[0]);
     mqtt_send(DSMR_DEV_COUNTER, msg, 1);
     
     // Debiet is ((now gas - previous gas) * 60*60 (sec/hour) / (now timestamp - last timestamp))
     double debiet = (((data->dev_counter[0] - last_gas_count) * 60*60) / (data->dev_counter_timestamp[0] - last_gas_timestamp));
-    sprintf(msg, "%.3f", debiet);
+    snprintf(msg, 256, "%.3f", debiet);
     mqtt_send(DSMR_DEV_COUNTER_RATE, msg, 1);
     
     last_gas_count     = data->dev_counter[0];
@@ -283,8 +360,6 @@ int main(int argc, char **argv) {
   telegram_parser_read(&parser);
 
   struct dsmr_data_struct *data = parser.data;
-
-  int err;
 
   do {
     // TODO: figure out how to handle errors, time-outs, etc.
