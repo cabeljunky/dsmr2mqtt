@@ -402,7 +402,7 @@ int main(int argc, char **argv) {
     init_messages();
 
     telegram_parser parser;
-    if ( 0 == telegram_parser_open(&parser, config.serial_device, 0, 0, NULL) )
+    if ( 0 == telegram_parser_open(&parser, config.serial_device, 0, 0, NULL) ) {
         
       telegram_parser_read(&parser);
 
