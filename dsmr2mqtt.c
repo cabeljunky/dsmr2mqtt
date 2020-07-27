@@ -398,7 +398,7 @@ int main(int argc, char **argv) {
   parse_arguments(argc, argv);
 
   // setup mqtt connection
-  if ( 0 == mqtt_setup(config.mqtt_broker_host, config.mqtt_broker_port) ){
+  if ( 0 == mqtt_setup(config.mqtt_broker_host, config.mqtt_broker_port) ) {
     init_messages();
 
     telegram_parser parser;
@@ -419,12 +419,11 @@ int main(int argc, char **argv) {
                                                 // serial device, keep 
                                                 // reading, otherwise exit
     }
-    else
-    {
+    else {
       telegram_parser_close(&parser);
     }
   }
-  else{
+  else {
     mosquitto_destroy(mosq);
     mosquitto_lib_cleanup();
   }
