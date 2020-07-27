@@ -97,6 +97,10 @@ void show_help() {
 int parse_arguments(int argc, char **argv) {
   int c = 0;
   int digit_optind = 0;
+  int aopt = 0; 
+  int bopt = 0;
+  char *copt = 0;
+  char *dopt = 0;
 
   while ((c = getopt(argc, argv, "hd:m:p:")) != -1) {
     int this_option_optind = optind ? optind : 1;
@@ -174,7 +178,7 @@ int mqtt_send(char *topic, char *msg, bool retain) {
 
 int send_values(struct dsmr_data_struct *data) {
 
-  char *msg = calloc(2049);
+  char *msg = calloc(2049, sizeof(char) );
   
   // Calculate total energy consumption for today
   double e_in_today = 0.0;
@@ -208,7 +212,7 @@ int send_values(struct dsmr_data_struct *data) {
   snprintf(msg, 256, "%d.%d", data->P1_version_major, data->P1_version_minor);
   mqtt_send(DSMR_P1_VERSION, msg, 0);
 
-  snprintf(msg, 256, "%s", data->equipment_id, 18);
+  snprintf(msg, 256, "%s", data->equipment_id);
   mqtt_send(DSMR_EQUIPMENT_ID, msg, 0);
 
   snprintf(msg, 256, "%d", data->tariff);
@@ -265,27 +269,27 @@ int send_values(struct dsmr_data_struct *data) {
   mqtt_send(DSMR_E_OUT_TARIFF2, msg, 0);
   
   //  in V
-  snprintf(msg, 256, "%.3f", data->unit_V[0]);
+  snprintf(msg, 256, "%.3f", data->V[0]);
   mqtt_send(DSMR_V_L1, msg, 0);
 
   //  in V
-  snprintf(msg, 256, "%.3f", data->unit_V[1]);
+  snprintf(msg, 256, "%.3f", data->V[1]);
   mqtt_send(DSMR_V_L2, msg, 0);
 
   //  in V
-  snprintf(msg, 256, "%.3f", data->unit_V[2]);
+  snprintf(msg, 256, "%.3f", data->V[2]);
   mqtt_send(DSMR_V_L3, msg, 0);
 
  //  in V
-  snprintf(msg, 256, "%.3f", data->unit_I[0]);
+  snprintf(msg, 256, "%.3f", data->I[0]);
   mqtt_send(DSMR_I_L1, msg, 0);
 
   //  in V
-  snprintf(msg, 256, "%.3f", data->unit_I[1]);
+  snprintf(msg, 256, "%.3f", data->I[1]);
   mqtt_send(DSMR_I_L2, msg, 0);
 
   //  in V
-  snprintf(msg, 256, "%.3f", data->unit_I[2]);
+  snprintf(msg, 256, "%.3f", data->I[2]);
   mqtt_send(DSMR_I_L3, msg, 0);
 
 
