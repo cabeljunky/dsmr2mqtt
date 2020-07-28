@@ -209,7 +209,7 @@ int send_values(struct dsmr_data_struct *data, struct dsmr_data_struct *data_pre
     mqtt_send(DSMR_P1_VERSION, msg, 0);
   }
 
-  if( 0 != strncmp( data->equipment_id, data_prev->equipment_id, 18 ) {
+  if( 0 != strncmp( data->equipment_id, data_prev->equipment_id, 18 ) ) {
     snprintf(msg, 256, "%s", data->equipment_id);
     mqtt_send(DSMR_EQUIPMENT_ID, msg, 0);
   }
