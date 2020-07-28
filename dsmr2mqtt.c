@@ -61,7 +61,7 @@ struct dsmr2mqtt_config {
   char *mqtt_broker_host;
   int mqtt_broker_port;
 };
-struct dsmr2mqtt_config config;
+struct dsmr2mqtt_config config = {0};
 
 // Mosquitto 
 struct mosquitto *mosq = NULL;
@@ -134,7 +134,7 @@ void mosq_log_callback(struct mosquitto *mosq, void *userdata, int level, const 
     // case MOSQ_LOG_NOTICE:
     case MOSQ_LOG_WARNING:
     case MOSQ_LOG_ERR: {
-      fprintf(stderr, "%i:%s\n", level, str);
+      fprintf(stderr, "%d:%s\n", level, str);
     }
   }
 }
@@ -158,17 +158,17 @@ int mqtt_setup(char *host, int port) {
   // mosquitto_publish_callback_set(mosq, mosq_publish_callback);
 
   if (mosquitto_connect(mosq, host, port, keepalive)) {
-    fprintf(stderr, "Unable to connect to MQTT broker on %s:%i.\n", host, port);
+    fprintf(stderr, "Unable to connect to MQTT broker on %s:%d.\n", host, port);
     return -2;
   }
 
   int loop = mosquitto_loop_start(mosq);
   if (loop != MOSQ_ERR_SUCCESS) {
-    fprintf(stderr, "Unable to start loop: %i\n", loop);
+    fprintf(stderr, "Unable to start loop: %d\n", loop);
     return -3;
   }
 
-  fprintf(stderr, "Connected to MQTT broker on %s:%i...\n", host, port);
+  fprintf(stderr, "Connected to MQTT broker on %s:%d...\n", host, port);
   return 0;
 }
 
@@ -176,51 +176,7 @@ int mqtt_send(char *topic, char *msg, bool retain) {
   return mosquitto_publish(mosq, NULL, topic, strlen(msg), msg, 0, retain);
 }
 
-
-int init_messages(){
-  char *msg = calloc(256, sizeof(char) );
-  snprintf(msg, 256, "%d", 0);
-  mqtt_send(DSMR_DEV_COUNTER_TIMESTAMP, msg, 1);
-  mqtt_send(DSMR_DEV_COUNTER, msg, 1);
-  mqtt_send(DSMR_DEV_COUNTER_RATE, msg, 1);
-  mqtt_send(DSMR_E_IN_TODAY, msg, 0);
-  mqtt_send(DSMR_E_OUT_TODAY, msg, 0);
-  mqtt_send(DSMR_P1_VERSION, msg, 0);
-  mqtt_send(DSMR_EQUIPMENT_ID, msg, 0);
-  mqtt_send(DSMR_TARIFF, msg, 0);
-  mqtt_send(DSMR_SWITCH_POS, msg, 0);
-  mqtt_send(DSMR_MSG, msg, 0);
-  mqtt_send(DSMR_MSG_LONG, msg, 0);  
-  mqtt_send(DSMR_TIMESTAMP, msg, 0);
-  mqtt_send(DSMR_P_IN_TOTAL, msg, 0);
-  mqtt_send(DSMR_P_OUT_TOTAL, msg, 0);
-  mqtt_send(DSMR_P_IN_L1, msg, 0);
-  mqtt_send(DSMR_P_IN_L2, msg, 0);
-  mqtt_send(DSMR_P_IN_L3, msg, 0);
-  mqtt_send(DSMR_E_IN_TARIFF1, msg, 0);
-  mqtt_send(DSMR_E_IN_TARIFF2, msg, 0);
-  mqtt_send(DSMR_E_OUT_TARIFF1, msg, 0);
-  mqtt_send(DSMR_E_OUT_TARIFF2, msg, 0);
-  mqtt_send(DSMR_V_L1, msg, 0);
-  mqtt_send(DSMR_V_L2, msg, 0);
-  mqtt_send(DSMR_V_L3, msg, 0);
-  mqtt_send(DSMR_I_L1, msg, 0);
-  mqtt_send(DSMR_I_L2, msg, 0);
-  mqtt_send(DSMR_I_L3, msg, 0);
-  mqtt_send(DSMR_POWER_FAILURES, msg, 0);
-  mqtt_send(DSMR_POWER_FAILURES_LONG, msg, 0);
-  mqtt_send(DSMR_V_SAGS_L1, msg, 0);
-  mqtt_send(DSMR_V_SAGS_L2, msg, 0);
-  mqtt_send(DSMR_V_SAGS_L3, msg, 0);
-  mqtt_send(DSMR_V_SWELLS_L1, msg, 0);
-  mqtt_send(DSMR_V_SWELLS_L2, msg, 0);
-  mqtt_send(DSMR_V_SWELLS_L3, msg, 0);
-
-  free(msg);
-  return 0;
-}
-
-int send_values(struct dsmr_data_struct *data) {
+int send_values(struct dsmr_data_struct *data, struct dsmr_data_struct *data_prev) {
 
   char *msg = calloc(2049, sizeof(char) );
   
@@ -253,127 +209,194 @@ int send_values(struct dsmr_data_struct *data) {
 
 
   // Device Version 
-  snprintf(msg, 256, "%d.%d", data->P1_version_major, data->P1_version_minor);
-  mqtt_send(DSMR_P1_VERSION, msg, 0);
+  if( ( data->P1_version_major != data_prev->P1_version_major ) ||
+      ( data->P1_version_major != data_prev->P1_version_major ) 
+    ) {
+    snprintf(msg, 256, "%d.%d", data->P1_version_major, data->P1_version_minor);
+    mqtt_send(DSMR_P1_VERSION, msg, 0);
+  }
 
-  snprintf(msg, 256, "%s", data->equipment_id);
-  mqtt_send(DSMR_EQUIPMENT_ID, msg, 0);
+  if( data->equipment_id != data_prev->equipment_id ) {
+    snprintf(msg, 256, "%s", data->equipment_id);
+    mqtt_send(DSMR_EQUIPMENT_ID, msg, 0);
+  }
 
-  snprintf(msg, 256, "%d", data->tariff);
-  mqtt_send(DSMR_TARIFF, msg, 0);
+  if( data->tariff != data_prev->tariff ) {
+    snprintf(msg, 256, "%d", data->tariff);
+    mqtt_send(DSMR_TARIFF, msg, 0);
+  }
 
-  snprintf(msg, 256, "%d", data->switchpos);
-  mqtt_send(DSMR_SWITCH_POS, msg, 0);  
+  if( data->switchpos != data_prev->switchpos ) {
+    snprintf(msg, 256, "%d", data->switchpos);
+    mqtt_send(DSMR_SWITCH_POS, msg, 0);
+  }
 
-  snprintf(msg, 256, "%s", data->textmsg_codes);
-  mqtt_send(DSMR_MSG, msg, 0);  
+  if( data->textmsg_codes != data_prev->textmsg_codes ) {
+    snprintf(msg, 256, "%s", data->textmsg_codes);
+    mqtt_send(DSMR_MSG, msg, 0);
+  }
 
-  snprintf(msg, 2048, "%s", data->textmsg);
-  mqtt_send(DSMR_MSG_LONG, msg, 0);  
+  if( data->textmsg != data_prev->textmsg ) {
+    snprintf(msg, 2048, "%s", data->textmsg);
+    mqtt_send(DSMR_MSG_LONG, msg, 0);
+  }
 
-  // Current timestamp 
-  snprintf(msg, 256, "%d", data->timestamp);
-  mqtt_send(DSMR_TIMESTAMP, msg, 0);
+  if( data->timestamp != data_prev->timestamp ) {
+    // Current timestamp 
+    snprintf(msg, 256, "%d", data->timestamp);
+    mqtt_send(DSMR_TIMESTAMP, msg, 0);
+  }
 
-  // Current electricity delivered in Watts 
-  snprintf(msg, 256, "%.0f", data->P_in_total * 1000);
-  mqtt_send(DSMR_P_IN_TOTAL, msg, 0);
+  if( data->P_in_total != data_prev->P_in_total ) {
+    // Current electricity delivered in Watts 
+    snprintf(msg, 256, "%.0f", data->P_in_total * 1000);
+    mqtt_send(DSMR_P_IN_TOTAL, msg, 0);
+  }
 
-  // Current electricity returned in Watts 
-  snprintf(msg, 256, "%.0f", data->P_out_total * 1000);
-  mqtt_send(DSMR_P_OUT_TOTAL, msg, 0);
+  if( data->P_out_total != data_prev->P_out_total ) {
+    // Current electricity returned in Watts 
+    snprintf(msg, 256, "%.0f", data->P_out_total * 1000);
+    mqtt_send(DSMR_P_OUT_TOTAL, msg, 0);
+  }
 
-  //  in Watts 
-  snprintf(msg, 256, "%.0f", data->P_in[0] * 1000);
-  mqtt_send(DSMR_P_IN_L1, msg, 0);
+  if( data->P_in[0] != data_prev->P_in[0] ) {
+    //  in Watts 
+    snprintf(msg, 256, "%.0f", data->P_in[0] * 1000);
+    mqtt_send(DSMR_P_IN_L1, msg, 0);
+  }
 
-  //  in Watts
-  snprintf(msg, 256, "%.0f", data->P_in[1] * 1000);
-  mqtt_send(DSMR_P_IN_L2, msg, 0);
-  
-  //  in Watts
-  snprintf(msg, 256, "%.0f", data->P_in[2] * 1000);
-  mqtt_send(DSMR_P_IN_L3, msg, 0);
+  if( data->P_in[1] != data_prev->P_in[1] ) {
+    //  in Watts
+    snprintf(msg, 256, "%.0f", data->P_in[1] * 1000);
+    mqtt_send(DSMR_P_IN_L2, msg, 0);
+  }
 
+  if( data->P_in[2] != data_prev->P_in[2] ) {
+    //  in Watts
+    snprintf(msg, 256, "%.0f", data->P_in[2] * 1000);
+    mqtt_send(DSMR_P_IN_L3, msg, 0);
+  }
 
-  //  in kWh 
-  snprintf(msg, 256, "%.3f", data->E_in[1]);
-  mqtt_send(DSMR_E_IN_TARIFF1, msg, 0);
+  if( data->E_in[1] != data_prev->E_in[1] ) {
+    //  in kWh 
+    snprintf(msg, 256, "%.3f", data->E_in[1]);
+    mqtt_send(DSMR_E_IN_TARIFF1, msg, 0);
+  }
 
-  //  in kWh
-  snprintf(msg, 256, "%.3f", data->E_in[2]);
-  mqtt_send(DSMR_E_IN_TARIFF2, msg, 0);
+  if( data->E_in[1] != data_prev->E_in[1] ) {
+    //  in kWh
+    snprintf(msg, 256, "%.3f", data->E_in[2]);
+    mqtt_send(DSMR_E_IN_TARIFF2, msg, 0);
+  }
 
-  //  in kWh
-  snprintf(msg, 256, "%.3f", data->E_out[1]);
-  mqtt_send(DSMR_E_OUT_TARIFF1, msg, 0);
+  if( data->E_out[1] != data_prev->E_out[1] ) {
+    //  in kWh
+    snprintf(msg, 256, "%.3f", data->E_out[1]);
+    mqtt_send(DSMR_E_OUT_TARIFF1, msg, 0);
+  }
 
-  //  in kWh
-  snprintf(msg, 256, "%.3f", data->E_out[2]);
-  mqtt_send(DSMR_E_OUT_TARIFF2, msg, 0);
-  
-  //  in V
-  snprintf(msg, 256, "%.3f", data->V[0]);
-  mqtt_send(DSMR_V_L1, msg, 0);
+  if( data->E_out[2] != data_prev->E_out[2] ) {
+    //  in kWh
+    snprintf(msg, 256, "%.3f", data->E_out[2]);
+    mqtt_send(DSMR_E_OUT_TARIFF2, msg, 0);
+  }
 
-  //  in V
-  snprintf(msg, 256, "%.3f", data->V[1]);
-  mqtt_send(DSMR_V_L2, msg, 0);
-
-  //  in V
-  snprintf(msg, 256, "%.3f", data->V[2]);
-  mqtt_send(DSMR_V_L3, msg, 0);
-
- //  in V
-  snprintf(msg, 256, "%.3f", data->I[0]);
-  mqtt_send(DSMR_I_L1, msg, 0);
-
-  //  in V
-  snprintf(msg, 256, "%.3f", data->I[1]);
-  mqtt_send(DSMR_I_L2, msg, 0);
-
-  //  in V
-  snprintf(msg, 256, "%.3f", data->I[2]);
-  mqtt_send(DSMR_I_L3, msg, 0);
-
-
-  snprintf(msg, 256, "%d", data->power_failures);
-  mqtt_send(DSMR_POWER_FAILURES, msg, 0);
-  snprintf(msg, 256, "%d", data->power_failures_long);
-  mqtt_send(DSMR_POWER_FAILURES_LONG, msg, 0);
-
-  //  in V
-  snprintf(msg, 256, "%d", data->V_sags[0]);
-  mqtt_send(DSMR_V_SAGS_L1, msg, 0);
-  //  in V
-  snprintf(msg, 256, "%d", data->V_sags[1]);
-  mqtt_send(DSMR_V_SAGS_L2, msg, 0);
-  //  in V
-  snprintf(msg, 256, "%d", data->V_sags[2]);
-  mqtt_send(DSMR_V_SAGS_L3, msg, 0);
-
+  if( data->V[0] != data_prev->V[0] ) {
     //  in V
-  snprintf(msg, 256, "%d", data->V_sags[0]);
-  mqtt_send(DSMR_V_SWELLS_L1, msg, 0);
-  //  in V
-  snprintf(msg, 256, "%d", data->V_sags[1]);
-  mqtt_send(DSMR_V_SWELLS_L2, msg, 0);
-  //  in V
-  snprintf(msg, 256, "%d", data->V_sags[2]);
-  mqtt_send(DSMR_V_SWELLS_L3, msg, 0);
+    snprintf(msg, 256, "%.3f", data->V[0]);
+    mqtt_send(DSMR_V_L1, msg, 0);
+  }
+
+  if( data->V[1] != data_prev->V[1] ) {
+    //  in V
+    snprintf(msg, 256, "%.3f", data->V[1]);
+    mqtt_send(DSMR_V_L2, msg, 0);
+  }
+
+  if( data->V[2] != data_prev->V[2] ) {
+    //  in V
+    snprintf(msg, 256, "%.3f", data->V[2]);
+    mqtt_send(DSMR_V_L3, msg, 0);
+  }
+
+  if( data->I[0] != data_prev->I[0] ) {
+    //  in V
+    snprintf(msg, 256, "%.3f", data->I[0]);
+    mqtt_send(DSMR_I_L1, msg, 0);
+  }
+
+  if( data->I[1] != data_prev->I[1] ) {
+    //  in V
+    snprintf(msg, 256, "%.3f", data->I[1]);
+    mqtt_send(DSMR_I_L2, msg, 0);
+  }
+
+  if( data->I[2] != data_prev->I[2] ) {
+    //  in V
+    snprintf(msg, 256, "%.3f", data->I[2]);
+    mqtt_send(DSMR_I_L3, msg, 0);
+  }
+
+  if( data->power_failures != data_prev->power_failures ) {
+    snprintf(msg, 256, "%d", data->power_failures);
+    mqtt_send(DSMR_POWER_FAILURES, msg, 0);
+  }
+  if( data->power_failures != data_prev->power_failures_long ) {
+    snprintf(msg, 256, "%d", data->power_failures_long);
+    mqtt_send(DSMR_POWER_FAILURES_LONG, msg, 0);
+  }
+
+  if( data->V_sags[0] != data_prev->V_sags[0] ) {
+    //  in V
+    snprintf(msg, 256, "%d", data->V_sags[0]);
+    mqtt_send(DSMR_V_SAGS_L1, msg, 0);
+  }
+
+  if( data->V_sags[1] != data_prev->V_sags[1] ) {
+    //  in V
+    snprintf(msg, 256, "%d", data->V_sags[1]);
+    mqtt_send(DSMR_V_SAGS_L2, msg, 0);
+  }
+  if( data->V_sags[2] != data_prev->V_sags[2] ) {
+    //  in V
+    snprintf(msg, 256, "%d", data->V_sags[2]);
+    mqtt_send(DSMR_V_SAGS_L3, msg, 0);
+  }
+
+  if( data->V_swells[0] != data_prev->V_swells[0] ) {
+      //  in V
+    snprintf(msg, 256, "%d", data->V_swells[0]);
+    mqtt_send(DSMR_V_SWELLS_L1, msg, 0);
+  }
+  if( data->V_swells[1] != data_prev->V_swells[1] ) {
+    //  in V
+    snprintf(msg, 256, "%d", data->V_swells[1]);
+    mqtt_send(DSMR_V_SWELLS_L2, msg, 0);
+  }
+  if( data->V_swells[2] != data_prev->V_swells[2] ) {
+    //  in V
+    snprintf(msg, 256, "%d", data->V_swells[2]);
+    mqtt_send(DSMR_V_SWELLS_L3, msg, 0);
+  }
 
   // Gas values (with retain)
   if (last_gas_timestamp != data->dev_counter_timestamp[0]) {
-    snprintf(msg, 256, "%i", data->dev_counter_timestamp[0]);
-    mqtt_send(DSMR_DEV_COUNTER_TIMESTAMP, msg, 1);
+    if( data->dev_counter_timestamp[0] != data_prev->dev_counter_timestamp[0] ) {
+      snprintf(msg, 256, "%d", data->dev_counter_timestamp[0]);
+      mqtt_send(DSMR_DEV_COUNTER_TIMESTAMP, msg, 1);
+    }
     
-    snprintf(msg, 256, "%.3f", data->dev_counter[0]);
-    mqtt_send(DSMR_DEV_COUNTER, msg, 1);
+    if( data->dev_counter[0] != data_prev->dev_counter[0] ) {
+      snprintf(msg, 256, "%.3f", data->dev_counter[0]);
+      mqtt_send(DSMR_DEV_COUNTER, msg, 1);
+    }
     
-    // Debiet is ((now gas - previous gas) * 60*60 (sec/hour) / (now timestamp - last timestamp))
-    double debiet = (((data->dev_counter[0] - last_gas_count) * 60*60) / (data->dev_counter_timestamp[0] - last_gas_timestamp));
-    snprintf(msg, 256, "%.3f", debiet);
-    mqtt_send(DSMR_DEV_COUNTER_RATE, msg, 1);
+    if( data->dev_counter[0] != data_prev->dev_counter[0] ) {
+      // Debiet is ((now gas - previous gas) * 60*60 (sec/hour) / (now timestamp - last timestamp))
+      double debiet = (((data->dev_counter[0] - last_gas_count) * 60*60) / (data->dev_counter_timestamp[0] - last_gas_timestamp));
+      snprintf(msg, 256, "%.3f", debiet);
+      mqtt_send(DSMR_DEV_COUNTER_RATE, msg, 1);
+    }
     
     last_gas_count     = data->dev_counter[0];
     last_gas_timestamp = data->dev_counter_timestamp[0];
@@ -399,22 +422,26 @@ int main(int argc, char **argv) {
 
   // setup mqtt connection
   if ( 0 == mqtt_setup(config.mqtt_broker_host, config.mqtt_broker_port) ) {
-    init_messages();
+    telegram_parser parser_new = { 0 };
+    telegram_parser parser_prev = { 0 };
 
-    telegram_parser parser;
     if ( 0 == telegram_parser_open(&parser, config.serial_device, 0, 0, NULL) ) {
-        
-      telegram_parser_read(&parser);
+      struct dsmr_data_struct *data_struct_new = NULL;
+      struct dsmr_data_struct *data_struct_prev = NULL;
+      telegram_parser_read(&parser_new);
 
-      struct dsmr_data_struct *data = parser.data;
+      data_struct_new = parser_new.data;
+      data_struct_prev = parser_prev.data;
 
       do {
         // TODO: figure out how to handle errors, time-outs, etc.
-        telegram_parser_read(&parser);
+        telegram_parser_read(&parser_new);
 
         // Send values to MQTT broker
-        send_values(data);
+        send_values(data_struct_new, data_struct_prev);
 
+        //Copy currect struct to pervious struct
+        memcpy( &parser_new, &parser_prev, sizeof(telegram_parser) );
       } while (parser.terminal && keepRunning); // If we're connected to a 
                                                 // serial device, keep 
                                                 // reading, otherwise exit
