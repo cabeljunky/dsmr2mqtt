@@ -440,7 +440,7 @@ int main(int argc, char **argv) {
                                                 // reading, otherwise exit
     }
     else {
-      telegram_parser_close(&parser);
+      telegram_parser_close(&parser_new);
     }
   }
   else {
