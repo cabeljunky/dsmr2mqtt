@@ -209,7 +209,7 @@ int send_values(struct dsmr_data_struct *data, struct dsmr_data_struct *data_pre
     mqtt_send(DSMR_P1_VERSION, msg, 0);
   }
 
-  if( data->equipment_id != data_prev->equipment_id ) {
+  if( 0 != strncmp( data->equipment_id, data_prev->equipment_id, 18 ) {
     snprintf(msg, 256, "%s", data->equipment_id);
     mqtt_send(DSMR_EQUIPMENT_ID, msg, 0);
   }
@@ -334,7 +334,7 @@ int send_values(struct dsmr_data_struct *data, struct dsmr_data_struct *data_pre
     snprintf(msg, 256, "%d", data->power_failures);
     mqtt_send(DSMR_POWER_FAILURES, msg, 0);
   }
-  if( data->power_failures != data_prev->power_failures_long ) {
+  if( data->power_failures_long != data_prev->power_failures_long ) {
     snprintf(msg, 256, "%d", data->power_failures_long);
     mqtt_send(DSMR_POWER_FAILURES_LONG, msg, 0);
   }
@@ -420,8 +420,6 @@ int main(int argc, char **argv) {
     if ( 0 == telegram_parser_open(&parser, config.serial_device, 0, 0, NULL) ) {
       struct dsmr_data_struct data_struct_prev = {0};
       telegram_parser_read(&parser);
-
-      memcpy( &data_struct_prev, parser.data, sizeof(struct dsmr_data_struct) );
 
       do {
         // TODO: figure out how to handle errors, time-outs, etc.
