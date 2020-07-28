@@ -415,32 +415,29 @@ int main(int argc, char **argv) {
 
   // setup mqtt connection
   if ( 0 == mqtt_setup(config.mqtt_broker_host, config.mqtt_broker_port) ) {
-    telegram_parser parser_new = { 0 };
-    telegram_parser parser_prev = { 0 };
+    telegram_parser parser = { 0 };
 
     if ( 0 == telegram_parser_open(&parser_new, config.serial_device, 0, 0, NULL) ) {
-      struct dsmr_data_struct *data_struct_new = NULL;
-      struct dsmr_data_struct *data_struct_prev = NULL;
-      telegram_parser_read(&parser_new);
+      struct dsmr_data_struct data_struct_prev = {0};
+      telegram_parser_read(&parser);
 
-      data_struct_new = parser_new.data;
-      data_struct_prev = parser_prev.data;
+      memcpy( &data_struct_prev, &parser.data, sizeof(dsmr_data_struct) );
 
       do {
         // TODO: figure out how to handle errors, time-outs, etc.
-        telegram_parser_read(&parser_new);
+        telegram_parser_read(&parser);
 
         // Send values to MQTT broker
-        send_values(data_struct_new, data_struct_prev);
+        send_values(&parser.data, data_struct_prev);
 
         //Copy currect struct to pervious struct
-        memcpy( &parser_new, &parser_prev, sizeof(telegram_parser) );
-      } while (parser_new.terminal && keepRunning); // If we're connected to a 
+        memcpy( &data_struct_prev, &parser.data, sizeof(dsmr_data_struct) );
+      } while ( (true == parser.terminal) && (true == keepRunning) ); // If we're connected to a 
                                                 // serial device, keep 
                                                 // reading, otherwise exit
     }
     else {
-      telegram_parser_close(&parser_new);
+      telegram_parser_close(&parser);
     }
   }
   else {
