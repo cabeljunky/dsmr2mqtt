@@ -417,7 +417,7 @@ int main(int argc, char **argv) {
   if ( 0 == mqtt_setup(config.mqtt_broker_host, config.mqtt_broker_port) ) {
     telegram_parser parser = { 0 };
 
-    if ( 0 == telegram_parser_open(&parser_new, config.serial_device, 0, 0, NULL) ) {
+    if ( 0 == telegram_parser_open(&parser, config.serial_device, 0, 0, NULL) ) {
       struct dsmr_data_struct data_struct_prev = {0};
       telegram_parser_read(&parser);
 
@@ -428,10 +428,10 @@ int main(int argc, char **argv) {
         telegram_parser_read(&parser);
 
         // Send values to MQTT broker
-        send_values(&parser.data, data_struct_prev);
+        send_values(parser.data, &data_struct_prev);
 
         //Copy currect struct to pervious struct
-        memcpy( &data_struct_prev, &parser.data, sizeof(dsmr_data_struct) );
+        memcpy( &data_struct_prev, &parser.data, sizeof(struct dsmr_data_struct) );
       } while ( (true == parser.terminal) && (true == keepRunning) ); // If we're connected to a 
                                                 // serial device, keep 
                                                 // reading, otherwise exit
