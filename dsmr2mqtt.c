@@ -435,7 +435,7 @@ int main(int argc, char **argv) {
 
         //Copy currect struct to pervious struct
         memcpy( &parser_new, &parser_prev, sizeof(telegram_parser) );
-      } while (parser.terminal && keepRunning); // If we're connected to a 
+      } while (parser_new.terminal && keepRunning); // If we're connected to a 
                                                 // serial device, keep 
                                                 // reading, otherwise exit
     }
