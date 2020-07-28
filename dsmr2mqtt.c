@@ -98,7 +98,6 @@ int parse_arguments(int argc, char **argv) {
   int c = 0;
 
   while ((c = getopt(argc, argv, "hd:m:p:")) != -1) {
-    int this_option_optind = optind ? optind : 1;
     switch (c) {
       case 'h':
         show_help();
@@ -419,7 +418,7 @@ int main(int argc, char **argv) {
     telegram_parser parser_new = { 0 };
     telegram_parser parser_prev = { 0 };
 
-    if ( 0 == telegram_parser_open(&parser, config.serial_device, 0, 0, NULL) ) {
+    if ( 0 == telegram_parser_open(&parser_new, config.serial_device, 0, 0, NULL) ) {
       struct dsmr_data_struct *data_struct_new = NULL;
       struct dsmr_data_struct *data_struct_prev = NULL;
       telegram_parser_read(&parser_new);
