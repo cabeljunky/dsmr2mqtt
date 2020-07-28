@@ -421,7 +421,7 @@ int main(int argc, char **argv) {
       struct dsmr_data_struct data_struct_prev = {0};
       telegram_parser_read(&parser);
 
-      memcpy( &data_struct_prev, &parser.data, sizeof(dsmr_data_struct) );
+      memcpy( &data_struct_prev, parser.data, sizeof(struct dsmr_data_struct) );
 
       do {
         // TODO: figure out how to handle errors, time-outs, etc.
@@ -431,7 +431,7 @@ int main(int argc, char **argv) {
         send_values(parser.data, &data_struct_prev);
 
         //Copy currect struct to pervious struct
-        memcpy( &data_struct_prev, &parser.data, sizeof(struct dsmr_data_struct) );
+        memcpy( &data_struct_prev, parser.data, sizeof(struct dsmr_data_struct) );
       } while ( (true == parser.terminal) && (true == keepRunning) ); // If we're connected to a 
                                                 // serial device, keep 
                                                 // reading, otherwise exit
