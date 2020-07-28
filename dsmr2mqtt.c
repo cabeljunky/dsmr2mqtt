@@ -96,11 +96,6 @@ void show_help() {
 
 int parse_arguments(int argc, char **argv) {
   int c = 0;
-  int digit_optind = 0;
-  int aopt = 0; 
-  int bopt = 0;
-  char *copt = 0;
-  char *dopt = 0;
 
   while ((c = getopt(argc, argv, "hd:m:p:")) != -1) {
     int this_option_optind = optind ? optind : 1;
@@ -177,8 +172,7 @@ int mqtt_send(char *topic, char *msg, bool retain) {
 }
 
 int send_values(struct dsmr_data_struct *data, struct dsmr_data_struct *data_prev) {
-
-  char *msg = calloc(2049, sizeof(char) );
+  char *msg = calloc(2050, sizeof(char) );
   
   // Calculate total energy consumption for today
   double e_in_today = 0.0;
@@ -237,7 +231,7 @@ int send_values(struct dsmr_data_struct *data, struct dsmr_data_struct *data_pre
   }
 
   if( data->textmsg != data_prev->textmsg ) {
-    snprintf(msg, 2048, "%s", data->textmsg);
+    snprintf(msg, 2049, "%s", data->textmsg);
     mqtt_send(DSMR_MSG_LONG, msg, 0);
   }
 
