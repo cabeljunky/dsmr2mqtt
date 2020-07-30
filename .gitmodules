@@ -1,3 +1,6 @@
 [submodule "dsmr-p1-parser"]
 	path = dsmr-p1-parser
 	url = https://github.com/terual/dsmr-p1-parser.git
+[submodule "dsmr2mqtt/dsmr-p1-parser"]
+	path = dsmr2mqtt/dsmr-p1-parser
+	url = https://github.com/terual/dsmr-p1-parser.git

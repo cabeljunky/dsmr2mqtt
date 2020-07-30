@@ -1,0 +1,23 @@
+version: '3.7'
+
+services:
+  dsmr2mqtt:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dsmr2mqtt
+    image: dsmr2mqtt:latest
+    restart: always
+    tty: true
+    stop_signal: SIGINT
+    environment:
+      - DSMR_SERIAL=/dev/ttyUSB_DSMR
+      - DSMR_MQTT_URL=mqqt-smurf.server.dronten.red-home.nl
+      - DSMR_MQTT_PORT=1883
+    networks:
+      - dsmr
+    devices:
+      - /dev/ttyUSB_DSMR:/dev/ttyUSB_DSMR
+      - /dev/ttyUSB0:/dev/ttyUSB0
+networks:
+  dsmr:
