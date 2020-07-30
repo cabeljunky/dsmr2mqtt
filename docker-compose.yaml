@@ -11,9 +11,9 @@ services:
     tty: true
     stop_signal: SIGINT
     environment:
-      - DSMR_SERIAL=/dev/ttyUSB_DSMR
-      - DSMR_MQTT_URL=mqqt-smurf.server.dronten.red-home.nl
-      - DSMR_MQTT_PORT=1883
+      - DSMR_SERIAL=
+      - DSMR_MQTT_URL=
+      - DSMR_MQTT_PORT=
     networks:
       - dsmr
     devices:
