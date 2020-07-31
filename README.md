@@ -21,10 +21,17 @@ First make sure you have git installed and the necessary library.
 Then get the source code and use the command make to build the dsmr2mqtt executable:
 ```
 $ cd [whatever build dir]
-$ git clone https://github.com/terual/dsmr2mqtt
+$ git clone --recurse-submodules -j8 https://github.com/cabeljunky/dsmr2mqtt
 $ cd dsmr2mqtt
 $ make
 $ ./dsmr2mqtt
+```
+Use as a docker container:
+```
+$ cd [whatever build dir]
+$ git clone https://github.com/cabeljunky/dsmr2mqtt
+$ cd dsmr2mqtt
+$ docker-compose up -d
 ```
 
 ### Cross-compiling for OpenWRT
