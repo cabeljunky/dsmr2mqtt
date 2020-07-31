@@ -26,6 +26,8 @@ $ cd dsmr2mqtt
 $ make
 $ ./dsmr2mqtt
 ```
+
+## Using docker 
 Use as a docker container:
 ```
 $ cd [whatever build dir]
@@ -33,11 +35,6 @@ $ git clone https://github.com/cabeljunky/dsmr2mqtt
 $ cd dsmr2mqtt
 $ docker-compose up -d
 ```
-
-### Cross-compiling for OpenWRT
-
-To compile this for OpenWRT, use the following [guide](https://openwrt.org/docs/guide-developer/using_the_sdk),
-place the Makefile.openwrt in a seperate dsmr2mqtt package folder, and rename it to Makefile.
 
 ## Using the tool
 
