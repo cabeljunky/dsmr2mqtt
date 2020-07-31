@@ -16,7 +16,7 @@ RUN apt-get update && \
     apt-get clean && \
     useradd --group users --groups dialout --shell /bin/false --no-create-home dsrm2mqtt 
     
-USER dsrm2mqqt
+USER dsrm2mqtt
 
 COPY --from=builder /usr/src/dsmr2mqtt/dsmr2mqtt/dsmr2mqtt /usr/bin/dsmr2mqtt
 COPY scripts/entrypoint.sh entrypoint.sh
